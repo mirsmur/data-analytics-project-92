@@ -1,7 +1,7 @@
 -- Этот запрос выводит 10 лучших по выручке продавцов
 select concat(c.first_name, ' ', c.last_name) as seller,
 	count(s.sales_id) as operations,
-	sum(s.quantity*price) as income
+	floor(sum(s.quantity*price)) as income
 from sales as s
 left join employees  as c 
 	on c.employee_id = s.sales_person_id 
@@ -30,7 +30,7 @@ order by average_income;
 -- Этот запрос выводит отчет с данными по выручке по каждому продавцу и дню недели
 select seller,
 	TO_CHAR(sale_date, 'Day') as day_of_week,
-	income
+	floor(income)
 from (
 	select concat(e.first_name, ' ', e.last_name) as seller,
 		EXTRACT(DOW from sale_date) as day_of_week,
