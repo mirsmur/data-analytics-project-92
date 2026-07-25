@@ -33,7 +33,7 @@ order by average_income;
 -- Этот запрос выводит отчет с данными по выручке по каждому продавцу и дню недели
 select seller,
 	TO_CHAR(sale_date, 'Day') as day_of_week,
-	floor(income)
+	floor(income) as income
 from (
 	select concat(e.first_name, ' ', e.last_name) as seller,
 		EXTRACT(DOW from sale_date) as day_of_week,
