@@ -17,7 +17,7 @@ order by income desc limit 10;
 -- Этот запрос выводит отчет с продавцами, чья выручка ниже средней выручки всех продавцов
 select
     seller,
-    floor(average_income)
+    floor(average_income) as average_income
 from (
     select
         concat(e.first_name, ' ', e.last_name) as seller,
@@ -39,14 +39,14 @@ order by average_income;
 -- Этот запрос выводит отчет с данными по выручке по каждому продавцу и дню недели
 select
     seller,
-    day_of_week,
+    trim(day_of_week),
     floor(sum(income)) as income
 from (
     select
         concat(e.first_name, ' ', e.last_name) as seller,
-        to_char(sale_date, 'Day') as day_of_week,
+        to_char(sale_date, 'day') as day_of_week,
         sum(s.quantity * price) as income,
-        extract(dow from sale_date) as num_of_day
+        extract(isodow from sale_date) as num_of_day
     from sales as s
     left join employees as e
         on s.sales_person_id = e.employee_id
@@ -79,45 +79,47 @@ group by age_category;
 --Этот запрос считает количество уникальных покупателей в месяце и выручку, которую они принесли
 select
     to_char(selling_month, 'YYYY-MM') as selling_month,
-    sum(total_customers) as total_customers,
-    sum(income) as income
+    count(distinct customer_id) as total_customers,
+    floor(sum(income)) as income
 from (
     select
-        s.sale_date,
-        floor(sum(s.quantity * price)) as income,
-        date_trunc('month', s.sale_date) as selling_month,
-        count(s.customer_id) as total_customers
+        s.customer_id,
+        sum(s.quantity * price) as income,
+        date_trunc('month', s.sale_date) as selling_month
     from sales as s
     left join customers as c
         on s.customer_id = c.customer_id
     left join products as p
         on s.product_id = p.product_id
-    group by extract(month from s.sale_date), s.sale_date
+    group by selling_month, s.sale_date, s.customer_id
+    order by selling_month
 )
 group by selling_month
 order by selling_month;
 
+
 -- Этот запрос выводит список покупателей, пришедших по акционному предложению
 select
-    s.sale_date,
+    sub.sale_date,
     concat(c.first_name, ' ', c.last_name) as customer,
     concat(e.first_name, ' ', e.last_name) as seller
 from (
     select
         s.customer_id,
-        min(s.sales_id) over (partition by s.customer_id) as sales_id
+        min(s.sale_date) over (partition by s.customer_id) as sale_date,
+        min(s.sales_id) over (partition by s.customer_id) as sales_id,
+        quantity * price as cost
     from sales as s
     left join products as p
         on p.product_id = s.product_id
-    where price = 0
-    group by s.sales_id, s.customer_id
-    order by s.sales_id
+    group by s.customer_id, s.sales_id, s.sale_date, price, quantity
+    order by s.customer_id
 ) as sub
 left join sales as s
     on sub.sales_id = s.sales_id
 left join customers as c
-    on s.customer_id = c.customer_id
+    on sub.customer_id = c.customer_id
 left join employees as e
     on s.sales_person_id = e.employee_id
-group by sub.sales_id, sub.customer_id, customer, seller, sale_date
-order by sub.customer_id;
+where sub.cost = 0
+group by customer, seller, sub.sale_date;
