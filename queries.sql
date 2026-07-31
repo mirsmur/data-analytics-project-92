@@ -55,7 +55,7 @@ select
     case
         when age > 40 then '40+'
         when age between 26 and 40 then '26-40'
-        when age < 26 then '16-25'
+        when age between 16 and 25 then '16-25'
     end as age_category,
     count(age) as age_count
 from customers
@@ -64,22 +64,14 @@ order by age_category;
 
 --Этот запрос считает количество уникальных покупателей в месяце и выручку, которую они принесли
 select
-    to_char(selling_month, 'YYYY-MM') as selling_month,
-    count(distinct customer_id) as total_customers,
-    floor(sum(income)) as income
-from (
-    select
-        s.customer_id,
-        sum(s.quantity * price) as income,
-        date_trunc('month', s.sale_date) as selling_month
-    from sales as s
-    left join customers as c
-        on s.customer_id = c.customer_id
-    left join products as p
-        on s.product_id = p.product_id
-    group by selling_month, s.sale_date, s.customer_id
-    order by selling_month
-)
+    to_char(date_trunc('month', s.sale_date), 'YYYY-MM') as selling_month,
+    count(distinct s.customer_id) as total_customers,
+    floor(sum(s.quantity * price)) as income
+from sales as s
+left join customers as c
+    on s.customer_id = c.customer_id
+left join products as p
+    on s.product_id = p.product_id
 group by selling_month
 order by selling_month;
 
